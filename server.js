@@ -1,6 +1,7 @@
 const express = require("express");
 const app = express();
-
+const cluster = require("cluster");
+const os = require("os");
 const PORT = process.env.PORT || 8000;
 
 function delay(duration) {
@@ -11,7 +12,7 @@ function delay(duration) {
 }
 
 app.get("/", (req, res) => {
-  res.send("Performance example");
+  res.send(`Performance example: ${process.pid}`);
 });
 
 // LEARNING :
@@ -21,9 +22,22 @@ app.get("/", (req, res) => {
 app.get("/timer", (req, res) => {
   // delay the response here
   delay(10000); // will be blocked for 10 secons
-  res.send("Your request completed");
+  res.send(`timer completed ${process.pid}`);
 });
 
-app.listen(PORT, () => {
-  console.log("server is listening on port " + PORT);
-});
+if (cluster.isMaster) {
+  console.log("Master has been started");
+
+  const TOTAL_WORKERS = os.cpus().length;
+  for (let i = 0; i < TOTAL_WORKERS; i++) {
+    cluster.fork();
+  }
+  //   cluster.fork(); // will create worker 1
+  //   cluster.fork(); //will create worker 2
+} else {
+  console.log("Worker Process has been started...");
+  // start server when
+  app.listen(PORT, () => {
+    console.log("server is listening on port " + PORT);
+  });
+}
